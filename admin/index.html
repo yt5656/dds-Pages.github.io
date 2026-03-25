@@ -569,6 +569,151 @@
             box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3)
         }
 
+        /* UUID easter egg */
+        #nodeUUID {
+            cursor: pointer;
+        }
+
+        .uuid-click-fx {
+            position: fixed;
+            left: 0;
+            top: 0;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 9000000001;
+            color: #ef4444;
+            font-size: 16px;
+            font-weight: 700;
+            text-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
+            opacity: 0;
+            white-space: nowrap;
+            animation: uuidClickCountPop 0.75s ease-out forwards;
+        }
+
+        @keyframes uuidClickCountPop {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -20%) scale(0.7);
+            }
+
+            15% {
+                opacity: 1;
+                transform: translate(-50%, -40%) scale(1);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -130%) scale(1.1);
+            }
+        }
+
+        #uuidSnippetModal .modal {
+            width: 95%;
+            max-width: 980px;
+            padding: 22px;
+            text-align: left;
+        }
+
+        #uuidSnippetTitle {
+            margin: 0 0 14px 0;
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+            color: #1f2937;
+        }
+
+        #uuidSnippetTextarea {
+            width: 100%;
+            min-height: 360px;
+            max-height: 62vh;
+            padding: 12px;
+            border: 2px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 8px;
+            background-color: #f9fafb !important;
+            color: #6b7280 !important;
+            font-family: 'Monaco', 'Courier New', monospace;
+            resize: vertical;
+            overflow: auto;
+        }
+
+        .uuid-snippet-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+            margin-top: 16px;
+        }
+
+        .btn-uuid-copy,
+        .btn-uuid-close {
+            flex: 1;
+        }
+
+        .btn-uuid-copy {
+            background: linear-gradient(135deg, #3b82f6 0, #1d4ed8 100%);
+            color: #fff;
+        }
+
+        .btn-uuid-copy:hover:not([disabled]) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(59, 130, 246, 0.5);
+        }
+
+        .btn-uuid-copy[disabled] {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-uuid-close {
+            background: linear-gradient(135deg, #e5e7eb 0, #d1d5db 100%);
+            color: #374151;
+        }
+
+        .btn-uuid-close:hover {
+            background: linear-gradient(135deg, #d1d5db 0, #b3b8be 100%);
+        }
+
+        html.dark-mode #uuidSnippetModal .modal {
+            background: #1f2937;
+        }
+
+        html.dark-mode #uuidSnippetTitle {
+            color: #f3f4f6;
+        }
+
+        html.dark-mode #uuidSnippetTextarea {
+            background-color: var(--input-bg) !important;
+            border-color: var(--input-border) !important;
+            color: var(--text-secondary) !important;
+        }
+
+        html.dark-mode .btn-uuid-close {
+            background: linear-gradient(135deg, #374151 0, #2b3340 100%);
+            color: #f3f4f6;
+        }
+
+        html.dark-mode .btn-uuid-close:hover {
+            background: linear-gradient(135deg, #4b5563 0, #374151 100%);
+        }
+
+        @media (max-width: 768px) {
+            #uuidSnippetModal .modal {
+                padding: 16px;
+            }
+
+            #uuidSnippetTextarea {
+                min-height: 280px;
+                max-height: 58vh;
+            }
+
+            .uuid-snippet-buttons {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
         /* 消息提示 */
         .message {
             margin-top: 24px;
@@ -6622,6 +6767,22 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
     </div>
     </div>
 
+    <!-- Snippets.js 生成弹窗 -->
+    <div class="modal-overlay" id="uuidSnippetModal" onclick="closeUUIDSnippetModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <button type="button" class="modal-close" onclick="closeUUIDSnippetModal()">&times;</button>
+            <h2 id="uuidSnippetTitle">🧩 生成专属后端源码</h2>
+            <div class="form-group" style="margin-bottom: 0;">
+                <textarea id="uuidSnippetTextarea" title="生成专属后端源码" readonly></textarea>
+            </div>
+            <div class="uuid-snippet-buttons">
+                <button type="button" class="btn btn-uuid-copy" id="uuidSnippetCopyBtn" onclick="copyUUIDSnippetCode()"
+                    disabled>复制代码</button>
+                <button type="button" class="btn btn-uuid-close" onclick="closeUUIDSnippetModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ProxyIP 帮助科普弹窗 -->
     <div class="modal-overlay" id="proxyIPHelpModal" onclick="closeProxyIPHelpModal(event)">
         <div class="modal proxyip-help-modal" onclick="event.stopPropagation()">
@@ -9636,6 +9797,317 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
             }, 3000);
         }
 
+        // UUID easter egg
+        const UUID_EASTER_TARGET_COUNT = 10;
+        const UUID_EASTER_HINT_START = 5;
+        const UUID_EASTER_MAX_INTERVAL = 1000;
+        const UUID_EASTER_RESET_DELAY = 1400;
+        const UUID_SNIPPETS_JS_URL = 'https://raw.githubusercontent.com/EDT-Pages/EDT.min.js/Snippets/EDT.min.js';
+        const UUID_SNIPPETS_DICT_URL = 'https://raw.githubusercontent.com/EDT-Pages/EDT.min.js/Snippets/字典.json';
+
+        let uuidEasterClickCount = 0;
+        let uuidEasterLastClickAt = 0;
+        let uuidEasterResetTimer = null;
+        let uuidSnippetLoading = false;
+
+        function resetNodeUUIDEasterCount() {
+            uuidEasterClickCount = 0;
+            uuidEasterLastClickAt = 0;
+            if (uuidEasterResetTimer) {
+                clearTimeout(uuidEasterResetTimer);
+                uuidEasterResetTimer = null;
+            }
+        }
+
+        function showNodeUUIDClickFx(clickCount, clientX, clientY, fallbackEl) {
+            const rect = fallbackEl.getBoundingClientRect();
+            const baseX = Number.isFinite(clientX) ? clientX : rect.left + rect.width / 2;
+            const baseY = Number.isFinite(clientY) ? clientY : rect.top + rect.height / 2;
+            const x = baseX + (Math.random() * 14 - 7);
+            const y = baseY + (Math.random() * 8 - 4);
+
+            const fx = document.createElement('div');
+            fx.className = 'uuid-click-fx';
+            fx.textContent = 'x' + clickCount;
+            fx.style.left = x + 'px';
+            fx.style.top = y + 'px';
+            document.body.appendChild(fx);
+
+            setTimeout(() => fx.remove(), 850);
+        }
+
+        function sha224(s) {
+            const K = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da, 0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070, 0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
+            const r = (n, b) => ((n >>> b) | (n << (32 - b))) >>> 0;
+            s = unescape(encodeURIComponent(s));
+            const l = s.length * 8;
+            s += String.fromCharCode(0x80);
+            while ((s.length * 8) % 512 !== 448) s += String.fromCharCode(0);
+            const h = [0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939, 0xffc00b31, 0x68581511, 0x64f98fa7, 0xbefa4fa4];
+            const hi = Math.floor(l / 0x100000000);
+            const lo = l & 0xFFFFFFFF;
+            s += String.fromCharCode((hi >>> 24) & 0xFF, (hi >>> 16) & 0xFF, (hi >>> 8) & 0xFF, hi & 0xFF, (lo >>> 24) & 0xFF, (lo >>> 16) & 0xFF, (lo >>> 8) & 0xFF, lo & 0xFF);
+            const w = [];
+            for (let i = 0; i < s.length; i += 4) {
+                w.push((s.charCodeAt(i) << 24) | (s.charCodeAt(i + 1) << 16) | (s.charCodeAt(i + 2) << 8) | s.charCodeAt(i + 3));
+            }
+            for (let i = 0; i < w.length; i += 16) {
+                const x = new Array(64).fill(0);
+                for (let j = 0; j < 16; j++) x[j] = w[i + j];
+                for (let j = 16; j < 64; j++) {
+                    const s0 = r(x[j - 15], 7) ^ r(x[j - 15], 18) ^ (x[j - 15] >>> 3);
+                    const s1 = r(x[j - 2], 17) ^ r(x[j - 2], 19) ^ (x[j - 2] >>> 10);
+                    x[j] = (x[j - 16] + s0 + x[j - 7] + s1) >>> 0;
+                }
+                let [a, b, c, d, e, f, g, h0] = h;
+                for (let j = 0; j < 64; j++) {
+                    const S1 = r(e, 6) ^ r(e, 11) ^ r(e, 25);
+                    const ch = (e & f) ^ (~e & g);
+                    const t1 = (h0 + S1 + ch + K[j] + x[j]) >>> 0;
+                    const S0 = r(a, 2) ^ r(a, 13) ^ r(a, 22);
+                    const maj = (a & b) ^ (a & c) ^ (b & c);
+                    const t2 = (S0 + maj) >>> 0;
+                    h0 = g;
+                    g = f;
+                    f = e;
+                    e = (d + t1) >>> 0;
+                    d = c;
+                    c = b;
+                    b = a;
+                    a = (t1 + t2) >>> 0;
+                }
+                for (let j = 0; j < 8; j++) {
+                    h[j] = (h[j] + (j === 0 ? a : j === 1 ? b : j === 2 ? c : j === 3 ? d : j === 4 ? e : j === 5 ? f : j === 6 ? g : h0)) >>> 0;
+                }
+            }
+            let hex = '';
+            for (let i = 0; i < 7; i++) {
+                for (let j = 24; j >= 0; j -= 8) hex += ((h[i] >>> j) & 0xFF).toString(16).padStart(2, '0');
+            }
+            return hex;
+        }
+
+        function closeUUIDSnippetModal(event) {
+            if (event && event.target && event.target.id !== 'uuidSnippetModal') {
+                return;
+            }
+            const modal = document.getElementById('uuidSnippetModal');
+            if (modal) {
+                modal.classList.remove('show');
+            }
+        }
+
+        function setUUIDSnippetCopyButtonEnabled(enabled) {
+            const copyBtn = document.getElementById('uuidSnippetCopyBtn');
+            if (copyBtn) {
+                copyBtn.disabled = !enabled;
+            }
+        }
+
+        function openUUIDSnippetModal() {
+            const modal = document.getElementById('uuidSnippetModal');
+            const textarea = document.getElementById('uuidSnippetTextarea');
+            if (!modal || !textarea) {
+                return;
+            }
+
+            modal.classList.add('show');
+            textarea.value = '正在生成Snippets.js专属代码，请稍候...';
+            setUUIDSnippetCopyButtonEnabled(false);
+            generateUUIDSnippetCode();
+        }
+
+        async function copyUUIDSnippetCode() {
+            const textarea = document.getElementById('uuidSnippetTextarea');
+            const code = textarea ? textarea.value : '';
+            if (!code) {
+                showToast('暂无可复制代码', 'error');
+                return;
+            }
+
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(code);
+                } else {
+                    const tempTextarea = document.createElement('textarea');
+                    tempTextarea.value = code;
+                    tempTextarea.setAttribute('readonly', '');
+                    tempTextarea.style.position = 'fixed';
+                    tempTextarea.style.opacity = '0';
+                    tempTextarea.style.pointerEvents = 'none';
+                    tempTextarea.style.left = '-9999px';
+                    document.body.appendChild(tempTextarea);
+                    tempTextarea.focus();
+                    tempTextarea.select();
+                    tempTextarea.setSelectionRange(0, tempTextarea.value.length);
+                    const copied = document.execCommand('copy');
+                    tempTextarea.remove();
+                    if (!copied) throw new Error('copy failed');
+                }
+                showToast('专属代码已复制', 'success');
+            } catch (error) {
+                showToast('复制失败，请手动复制代码', 'error');
+            }
+        }
+
+        function replaceSnippetCredentials(sourceCode, userID) {
+            const password = sha224(userID);
+            const linePattern = /(const\s+userID\s*=\s*["'])([^"']*)(["']\s*,\s*Password\s*=\s*["'])([^"']*)(["']\s*;)/;
+            if (!linePattern.test(sourceCode)) {
+                throw new Error('未找到EDT.min.js中的userID与Password配置');
+            }
+            return sourceCode.replace(linePattern, `$1${userID}$3${password}$5`);
+        }
+
+        function buildSnippetDictionaryMap(dictionaryData) {
+            const allRaw = Array.isArray(dictionaryData?.ALL) ? dictionaryData.ALL : [];
+            const edtRaw = Array.isArray(dictionaryData?.EDT) ? dictionaryData.EDT : [];
+
+            const allChars = [...new Set(allRaw.filter(item => typeof item === 'string' && item.length > 0).map(item => item[0]))];
+            const edtChars = [...new Set(edtRaw.filter(item => typeof item === 'string' && item.length > 0).map(item => item[0]))];
+
+            if (!allChars.length || !edtChars.length) {
+                throw new Error('字典内容无效');
+            }
+            if (allChars.length < edtChars.length) {
+                throw new Error('字典ALL数量不足，无法完成不重复随机替换');
+            }
+
+            const randomizedAllChars = shuffleArray(allChars);
+            const dictionaryMap = new Map();
+            edtChars.forEach((char, index) => {
+                dictionaryMap.set(char, randomizedAllChars[index]);
+            });
+            return dictionaryMap;
+        }
+
+        function applySnippetDictionary(sourceCode, dictionaryMap) {
+            let result = '';
+            for (const ch of sourceCode) {
+                result += dictionaryMap.has(ch) ? dictionaryMap.get(ch) : ch;
+            }
+            return result;
+        }
+
+        async function generateUUIDSnippetCode() {
+            if (uuidSnippetLoading) {
+                return;
+            }
+
+            const textarea = document.getElementById('uuidSnippetTextarea');
+            const nodeUUIDInput = document.getElementById('nodeUUID');
+            if (!textarea || !nodeUUIDInput) {
+                return;
+            }
+
+            const uuidValue = (nodeUUIDInput.value || '').trim();
+            if (!uuidValue) {
+                textarea.value = '';
+                setUUIDSnippetCopyButtonEnabled(false);
+                showToast('UUID为空，无法生成专属代码', 'error');
+                return;
+            }
+
+            try {
+                uuidSnippetLoading = true;
+                const [rawScriptText, rawDictionaryText] = await Promise.all([
+                    fetchWithAutoMirror(UUID_SNIPPETS_JS_URL, 'Snippets EDT.min.js'),
+                    fetchWithAutoMirror(UUID_SNIPPETS_DICT_URL, 'Snippets 字典')
+                ]);
+
+                const replacedScript = replaceSnippetCredentials(rawScriptText, uuidValue);
+                const dictionaryData = JSON.parse(rawDictionaryText);
+                const dictionaryMap = buildSnippetDictionaryMap(dictionaryData);
+                const finalScript = applySnippetDictionary(replacedScript, dictionaryMap);
+
+                textarea.value = finalScript;
+                setUUIDSnippetCopyButtonEnabled(true);
+                showToast('Snippets.js专属代码已生成', 'success');
+            } catch (error) {
+                textarea.value = '';
+                setUUIDSnippetCopyButtonEnabled(false);
+                showToast('生成失败: ' + (error.message || error), 'error');
+            } finally {
+                uuidSnippetLoading = false;
+            }
+        }
+
+        async function copyNodeUUIDValue(nodeUUIDInput) {
+            const uuidValue = (nodeUUIDInput.value || '').trim();
+            if (!uuidValue) {
+                showToast('UUID为空，无法复制', 'error');
+                return;
+            }
+
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(uuidValue);
+                    showToast('已复制UUID的值', 'success');
+                    return;
+                }
+
+                const tempTextarea = document.createElement('textarea');
+                tempTextarea.value = uuidValue;
+                tempTextarea.setAttribute('readonly', '');
+                tempTextarea.style.position = 'fixed';
+                tempTextarea.style.opacity = '0';
+                tempTextarea.style.pointerEvents = 'none';
+                tempTextarea.style.left = '-9999px';
+                document.body.appendChild(tempTextarea);
+                tempTextarea.focus();
+                tempTextarea.select();
+                tempTextarea.setSelectionRange(0, tempTextarea.value.length);
+
+                const copied = document.execCommand('copy');
+                tempTextarea.remove();
+
+                if (copied) {
+                    showToast('已复制UUID的值', 'success');
+                } else {
+                    showToast('复制失败，请手动复制UUID', 'error');
+                }
+            } catch (error) {
+                showToast('复制失败，请手动复制UUID', 'error');
+            }
+        }
+
+        function initNodeUUIDEasterEgg() {
+            const nodeUUIDInput = document.getElementById('nodeUUID');
+            if (!nodeUUIDInput) {
+                return;
+            }
+
+            nodeUUIDInput.addEventListener('click', (event) => {
+                const now = Date.now();
+
+                if (now - uuidEasterLastClickAt > UUID_EASTER_MAX_INTERVAL) {
+                    uuidEasterClickCount = 0;
+                }
+
+                uuidEasterLastClickAt = now;
+                uuidEasterClickCount += 1;
+
+                if (uuidEasterResetTimer) {
+                    clearTimeout(uuidEasterResetTimer);
+                }
+                uuidEasterResetTimer = setTimeout(() => {
+                    resetNodeUUIDEasterCount();
+                }, UUID_EASTER_RESET_DELAY);
+
+                if (uuidEasterClickCount === 1) {
+                    copyNodeUUIDValue(nodeUUIDInput);
+                }
+
+                if (uuidEasterClickCount >= UUID_EASTER_HINT_START) {
+                    showNodeUUIDClickFx(uuidEasterClickCount, event.clientX, event.clientY, nodeUUIDInput);
+                }
+
+                if (uuidEasterClickCount >= UUID_EASTER_TARGET_COUNT) {
+                    openUUIDSnippetModal();
+                    resetNodeUUIDEasterCount();
+                }
+            });
+        }
         // 日志类型翻译
         function translateLogType(type, ua = '') {
             // 如果是 Get_SUB 类型，检查 UA 是否包含 subconverter
@@ -12622,6 +13094,7 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
             loadConfig();
             initUserMode();
             initLineEditor('customIPs');
+            initNodeUUIDEasterEgg();
             // 独立预加载 SubConfig 数据，不阻塞主流程
             loadSubConfigData().catch(err => console.error('SubConfig预加载失败:', err));
         });
