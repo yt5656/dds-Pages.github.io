@@ -2542,6 +2542,39 @@
             flex: 1
         }
 
+        .grpc-ua-wrapper {
+            position: relative;
+            display: block;
+            width: 100%;
+        }
+
+        .grpc-ua-wrapper input {
+            width: 100%;
+            padding-right: 86px !important;
+        }
+
+        .grpc-ua-action {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: none;
+            padding: 0;
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-decoration: underline;
+            text-align: right;
+            white-space: nowrap;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .grpc-ua-action:hover,
+        .grpc-ua-action:focus-visible {
+            color: #3b82f6;
+        }
+
         .readonly-wrapper {
             position: relative;
         }
@@ -6588,6 +6621,14 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                         </select>
                     </div>
 
+                    <div class="form-group" id="grpcUserAgentGroup" style="display: none;">
+                        <label for="grpcUserAgent">gRPC UA</label>
+                        <div class="input-wrapper grpc-ua-wrapper">
+                            <input type="text" id="grpcUserAgent" title="gRPC User-Agent" onchange="markModified('config')">
+                            <button type="button" class="grpc-ua-action" onclick="fillCurrentGrpcUA()">获取当前UA</button>
+                        </div>
+                    </div>
+
                     <div class="form-group" id="fingerprintGroup">
                         <label for="fingerprint">指纹伪装</label>
                         <select id="fingerprint" title="浏览器指纹"
@@ -9099,10 +9140,17 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
         function updateGrpcModeVisibility() {
             const transportSelect = document.getElementById('transport');
             const grpcModeGroup = document.getElementById('grpcModeGroup');
+            const grpcUserAgentGroup = document.getElementById('grpcUserAgentGroup');
             if (!transportSelect || !grpcModeGroup) return;
 
+            const isGrpcTransport = transportSelect.value === 'grpc';
             const hasGrpcModeField = currentConfig && currentConfig['gRPC模式'] !== undefined;
-            grpcModeGroup.style.display = hasGrpcModeField && transportSelect.value === 'grpc' ? '' : 'none';
+            const hasGrpcUserAgentField = currentConfig && currentConfig['gRPCUserAgent'] !== undefined;
+
+            grpcModeGroup.style.display = hasGrpcModeField && isGrpcTransport ? '' : 'none';
+            if (grpcUserAgentGroup) {
+                grpcUserAgentGroup.style.display = hasGrpcUserAgentField && isGrpcTransport ? '' : 'none';
+            }
         }
 
         function showTransportGrpcTooltip() {
@@ -9143,17 +9191,31 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
             markModified('config');
         }
 
+        function fillCurrentGrpcUA() {
+            const grpcUserAgentInput = document.getElementById('grpcUserAgent');
+            if (!grpcUserAgentInput) return;
+
+            grpcUserAgentInput.value = navigator.userAgent || '';
+            markModified('config');
+        }
+
         function syncTransportSettingsFromConfig() {
             const transportGroup = document.getElementById('transportGroup');
             const transportSelect = document.getElementById('transport');
             const grpcModeGroup = document.getElementById('grpcModeGroup');
             const grpcModeSelect = document.getElementById('grpcMode');
+            const grpcUserAgentGroup = document.getElementById('grpcUserAgentGroup');
+            const grpcUserAgentInput = document.getElementById('grpcUserAgent');
             if (!transportGroup || !transportSelect || !grpcModeGroup || !grpcModeSelect) return;
 
             const hasGrpcModeField = currentConfig && currentConfig['gRPC模式'] !== undefined;
+            const hasGrpcUserAgentField = currentConfig && currentConfig['gRPCUserAgent'] !== undefined;
             if (!hasGrpcModeField) {
                 transportGroup.style.display = 'none';
                 grpcModeGroup.style.display = 'none';
+                if (grpcUserAgentGroup) {
+                    grpcUserAgentGroup.style.display = 'none';
+                }
                 hideTransportGrpcTooltip();
                 return;
             }
@@ -9168,6 +9230,10 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
             grpcModeSelect.value = currentConfig['gRPC模式'] || 'gun';
             if (!grpcModeSelect.value) {
                 grpcModeSelect.value = 'gun';
+            }
+
+            if (grpcUserAgentInput) {
+                grpcUserAgentInput.value = hasGrpcUserAgentField ? (currentConfig['gRPCUserAgent'] || '') : '';
             }
 
             updateGrpcModeVisibility();
@@ -10041,6 +10107,16 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
             if (currentConfig['gRPC模式'] !== undefined) {
                 currentConfig['传输协议'] = document.getElementById('transport').value;
                 currentConfig['gRPC模式'] = document.getElementById('grpcMode').value || 'gun';
+            }
+            if (currentConfig['gRPCUserAgent'] !== undefined) {
+                const grpcUserAgentInput = document.getElementById('grpcUserAgent');
+                if (grpcUserAgentInput) {
+                    // 保存前兜底：如果去除空格后为空，自动填入当前UA
+                    if (!grpcUserAgentInput.value.replace(/\s+/g, '')) {
+                        grpcUserAgentInput.value = navigator.userAgent || '';
+                    }
+                    currentConfig['gRPCUserAgent'] = grpcUserAgentInput.value || '';
+                }
             }
             currentConfig.跳过证书验证 = document.getElementById('skipVerify').checked;
 
