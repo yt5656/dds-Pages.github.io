@@ -9540,10 +9540,6 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
 
         async function updateVersionBadgeHealthByLatest(currentVersion) {
             const currentVersionNumber = parseVersionNumber(currentVersion);
-            if (!currentVersionNumber) {
-                return;
-            }
-
             const latestVersionNumber = await fetchLatestOnlineVersionNumber();
             const diff = currentVersionNumber - latestVersionNumber;
             console.log(`[Version] 版本比较: current=${currentVersionNumber}, latest=${latestVersionNumber}, diff=${diff}`);
@@ -9553,45 +9549,48 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
         async function loadVersionByUUID(uuid) {
             const uuidValue = String(uuid || '').trim();
             if (!uuidValue) {
-                updateVersionBadge('');
+                updateVersionBadge(0);
+                await updateVersionBadgeHealthByLatest(0);
                 return;
             }
 
-            try {
-                const response = await fetch(`/version?_t=${Date.now()}&uuid=${encodeURIComponent(uuidValue)}`, {
-                    method: 'GET',
-                    headers: {
-                        'Cache-Control': 'no-cache, no-store, must-revalidate',
-                        'Pragma': 'no-cache',
-                        'Expires': '0'
-                    }
-                });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const maxRetries = 3;
+            let lastError = null;
 
-                let data;
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                    data = await response.json();
-                } catch (_) {
-                    updateVersionBadge('');
-                    return;
-                }
+                    const response = await fetch(`/version?_t=${Date.now()}&uuid=${encodeURIComponent(uuidValue)}`, {
+                        method: 'GET',
+                        headers: {
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache',
+                            'Expires': '0'
+                        }
+                    });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-                if (data && typeof data === 'object' && Object.prototype.hasOwnProperty.call(data, 'Version')) {
-                    const currentVersion = parseVersionNumber(data.Version);
-                    console.log(`[Version] 当前版本识别: raw="${data.Version}", parsed=${currentVersion}`);
-                    if (currentVersion) {
-                        updateVersionBadge(currentVersion);
-                        await updateVersionBadgeHealthByLatest(currentVersion);
-                    } else {
-                        updateVersionBadge('');
+                    const data = await response.json();
+                    if (!data || typeof data !== 'object' || !Object.prototype.hasOwnProperty.call(data, 'Version')) {
+                        throw new Error('missing Version field');
                     }
-                } else {
-                    updateVersionBadge('');
+
+                    const currentVersion = parseVersionNumber(data.Version);
+                    console.log(`[Version] 当前版本识别: raw="${data.Version}", parsed=${currentVersion}, attempt=${attempt}/${maxRetries}`);
+                    updateVersionBadge(currentVersion);
+                    await updateVersionBadgeHealthByLatest(currentVersion);
+                    return;
+                } catch (error) {
+                    lastError = error;
+                    console.warn(`[Version] 获取版本号失败(第${attempt}/${maxRetries}次):`, error);
+                    if (attempt < maxRetries) {
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                    }
                 }
-            } catch (error) {
-                console.warn('[Version] 获取版本号失败:', error);
-                updateVersionBadge('');
             }
+
+            console.warn('[Version] 获取版本号重试3次仍失败，按 0 处理:', lastError);
+            updateVersionBadge(0);
+            await updateVersionBadgeHealthByLatest(0);
         }
 
         function onVersionBadgeKeydown(event) {
