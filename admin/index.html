@@ -9851,6 +9851,33 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
             });
         }
 
+        function updateProtocolOptionAvailability(protocol) {
+            const ssTLSSelect = document.getElementById('ssTLS');
+            const enable0RTT = document.getElementById('enable0RTT');
+            const skipVerify = document.getElementById('skipVerify');
+            const tlsFragmentShadowrocket = document.getElementById('tlsFragmentShadowrocket');
+            const tlsFragmentHapp = document.getElementById('tlsFragmentHapp');
+
+            const isShadowsocks = protocol === 'ss';
+            const isShadowsocksNoTLS = isShadowsocks && ssTLSSelect && ssTLSSelect.value === 'false';
+
+            if (enable0RTT) {
+                enable0RTT.disabled = isShadowsocks;
+                if (isShadowsocks && enable0RTT.checked) {
+                    enable0RTT.checked = false;
+                }
+            }
+
+            [skipVerify, tlsFragmentShadowrocket, tlsFragmentHapp].forEach((checkbox) => {
+                if (checkbox) {
+                    checkbox.disabled = isShadowsocksNoTLS;
+                    if (isShadowsocksNoTLS && checkbox.checked) {
+                        checkbox.checked = false;
+                    }
+                }
+            });
+        }
+
         function updateProtocol() {
             const protocolSelect = document.getElementById('protocol');
             const ssMethodGroup = document.getElementById('ssMethodGroup');
@@ -9864,6 +9891,7 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
 
             const protocol = protocolSelect.value;
             updateSpecifiedPortLabelsByProtocol(protocol);
+            updateProtocolOptionAvailability(protocol);
             const transport = document.getElementById('transport');
             if (transport) {
                 const shouldLockTransport = protocol === 'ss';
