@@ -6734,6 +6734,19 @@
         html.low-performance-mode .btn {
             box-shadow: none !important;
         }
+
+        html.low-performance-mode .cf-bar-segment {
+            transition: none !important;
+        }
+
+        html.low-performance-mode .cf-bar-green,
+        html.low-performance-mode .cf-bar-blue {
+            box-shadow: none !important;
+        }
+
+        html.low-performance-mode .cf-percentage-center {
+            text-shadow: none !important;
+        }
     </style>
 
 </head>
@@ -6807,8 +6820,12 @@
                         <div class="cf-info-box">
                             <div class="cf-info-icon">ℹ️</div>
                             <div class="cf-info-text">
-                                <strong>每日请求数重置清零：</strong><br><span id="countdown" class="cf-highlight">距离重置还有 15小时24分
-                                    34秒</span>，<br>北京时间 (UTC+8) <strong
+                                <strong>每日请求数重置清零：</strong><br><span id="countdown" class="cf-highlight"><span
+                                        class="countdown-text">距离重置还有</span> <span class="countdown-numbers"
+                                        id="countdownHours">00</span><span class="countdown-text">小时</span><span
+                                        class="countdown-numbers" id="countdownMinutes">00</span><span
+                                        class="countdown-text">分</span><span class="countdown-numbers"
+                                        id="countdownSeconds">00</span><span class="countdown-text">秒</span></span>，<br>北京时间 (UTC+8) <strong
                                     class="cf-highlight">8:00</strong>重置，<br>今日使用情况总计：<strong class="cf-highlight"
                                     id="cfTotalDisplay">-</strong>。
                             </div>
@@ -9772,6 +9789,7 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                 cfUsageModule.style.display = 'block';
                 cfUsageModule.classList.remove('cf-usage-module');
                 updateCFUsageDisplay(cfUsage);
+                updateCountdown(true);
                 updateCloudflareButtonStates(true);
             } else {
                 cfUsageModule.style.display = 'none';
@@ -10937,6 +10955,9 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                 content.addEventListener('transitionend', onEnd);
 
                 module.classList.remove('collapsed');
+                if (module.id === 'cfUsageModule') {
+                    updateCountdown(true);
+                }
             } else {
                 // Collapse
                 const height = content.scrollHeight;
@@ -14683,18 +14704,54 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
         }
 
         // 更新倒计时
-        function updateCountdown() {
+        function updateCountdown(forceUpdate = false) {
+            const countdownEl = document.getElementById('countdown');
+            if (!countdownEl) return;
+
+            const cfUsageModule = document.getElementById('cfUsageModule');
+            const moduleVisible = !!cfUsageModule &&
+                getComputedStyle(cfUsageModule).display !== 'none' &&
+                !cfUsageModule.classList.contains('collapsed');
+
+            if (!forceUpdate && (document.hidden || !moduleVisible)) {
+                return;
+            }
+
             const now = new Date();
             const nextMidnightUTC = new Date(now);
             nextMidnightUTC.setUTCHours(0, 0, 0, 0);
             nextMidnightUTC.setUTCDate(nextMidnightUTC.getUTCDate() + 1); // 总是设置为明天的0点
 
             const diff = nextMidnightUTC - now;
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            const hours = String(Math.floor(diff / (1000 * 60 * 60))).padStart(2, '0');
+            const minutes = String(Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+            const seconds = String(Math.floor((diff % (1000 * 60)) / 1000)).padStart(2, '0');
 
-            document.getElementById('countdown').innerHTML = `<span class="countdown-text">距离重置还有</span> <span class="countdown-numbers">${hours.toString().padStart(2, '0')}</span><span class="countdown-text">小时</span><span class="countdown-numbers">${minutes.toString().padStart(2, '0')}</span><span class="countdown-text">分</span><span class="countdown-numbers">${seconds.toString().padStart(2, '0')}</span><span class="countdown-text">秒</span>`;
+            if (
+                !forceUpdate &&
+                countdownEl.dataset.hours === hours &&
+                countdownEl.dataset.minutes === minutes &&
+                countdownEl.dataset.seconds === seconds
+            ) {
+                return;
+            }
+
+            countdownEl.dataset.hours = hours;
+            countdownEl.dataset.minutes = minutes;
+            countdownEl.dataset.seconds = seconds;
+
+            const hoursEl = document.getElementById('countdownHours');
+            const minutesEl = document.getElementById('countdownMinutes');
+            const secondsEl = document.getElementById('countdownSeconds');
+
+            if (hoursEl && minutesEl && secondsEl) {
+                hoursEl.textContent = hours;
+                minutesEl.textContent = minutes;
+                secondsEl.textContent = seconds;
+                return;
+            }
+
+            countdownEl.textContent = `距离重置还有 ${hours}小时${minutes}分${seconds}秒`;
         }
 
         // ==================== 在线优选相关函数 ====================
