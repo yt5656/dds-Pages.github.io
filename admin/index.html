@@ -346,7 +346,7 @@
         .btn-primary {
             background: linear-gradient(135deg, #faab41 0, #f6821f 100%);
             color: #fff;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4)
+            box-shadow: 0 4px 15px rgba(255, 226, 96, 0.18)
         }
 
         .btn-primary::before {
@@ -366,7 +366,7 @@
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.5)
+            box-shadow: 0 6px 25px rgba(255, 226, 96, 0.3)
         }
 
         .btn-primary:active {
@@ -2774,7 +2774,7 @@
         .module-title .collapse-icon {
             width: 24px;
             height: 24px;
-            transition: transform 0.28s;
+            transition: none;
             fill: #666;
             flex-shrink: 0;
         }
@@ -2783,23 +2783,22 @@
             transform: rotate(90deg)
         }
 
-        /* 网络信息模块的折叠图标 */
-        #network-module-content~.module-title .collapse-icon,
-        .module-title .collapse-icon {
-            transition: transform 0.3s ease;
-        }
-
-        .module-content {
+        .module>.module-content {
             display: block;
-            /* overflow: hidden; */
-            max-height: 2000px;
-            opacity: 1;
-            transition: max-height 320ms cubic-bezier(.2, .8, .2, 1), opacity 220ms ease
+            overflow: visible;
+            height: auto;
+            transition: height 320ms cubic-bezier(.22, 1, .36, 1);
         }
 
-        .module.collapsed .module-content {
-            max-height: 0;
-            opacity: 0
+        .module.collapsed>.module-content {
+            display: none;
+            height: 0;
+        }
+
+        #network-module-content {
+            overflow: visible;
+            height: 0;
+            transition: height 320ms cubic-bezier(.22, 1, .36, 1);
         }
 
         .module .form-group,
@@ -3851,12 +3850,13 @@
         .advanced-module {
             transition: opacity 0.4s ease-in-out, max-height 0.5s ease-in-out, transform 0.4s ease-in-out, margin 0.5s ease-in-out, padding 0.5s ease-in-out, border-width 0.5s ease-in-out;
             transform-origin: top;
-            overflow: hidden;
+            overflow: visible;
             transform: scaleY(1);
             opacity: 1;
         }
 
         .simple-mode .advanced-module {
+            overflow: hidden;
             opacity: 0;
             max-height: 0;
             transform: scaleY(0.95);
@@ -10902,6 +10902,58 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
             markModified('proxy');
         }
 
+        function clearHeightTransition(content) {
+            if (content && content._transitionHandler) {
+                content.removeEventListener('transitionend', content._transitionHandler);
+                content._transitionHandler = null;
+            }
+        }
+
+        function animateSectionHeight(content, expand) {
+            if (!content) return;
+
+            clearHeightTransition(content);
+
+            content.style.display = 'block';
+            content.style.overflow = 'hidden';
+            const startHeight = content.getBoundingClientRect().height;
+            content.style.height = startHeight + 'px';
+            content.getBoundingClientRect();
+
+            const targetHeight = expand ? content.scrollHeight : 0;
+            if (Math.abs(targetHeight - startHeight) < 1) {
+                if (expand) {
+                    content.style.height = 'auto';
+                    content.style.overflow = 'visible';
+                } else {
+                    content.style.display = 'none';
+                    content.style.height = '0px';
+                    content.style.overflow = 'hidden';
+                }
+                return;
+            }
+
+            content.style.height = targetHeight + 'px';
+
+            const onEnd = function (e) {
+                if (e.propertyName !== 'height') return;
+                content.removeEventListener('transitionend', onEnd);
+                content._transitionHandler = null;
+
+                if (expand) {
+                    content.style.height = 'auto';
+                    content.style.overflow = 'visible';
+                } else {
+                    content.style.display = 'none';
+                    content.style.height = '0px';
+                    content.style.overflow = 'hidden';
+                }
+            };
+
+            content._transitionHandler = onEnd;
+            content.addEventListener('transitionend', onEnd);
+        }
+
         function toggleModule(titleEl) {
             const module = titleEl.parentElement;
             const content = module.querySelector('.module-content');
@@ -10913,73 +10965,22 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                 return;
             }
 
-            // If a transition is currently attached, remove it to avoid duplicate handlers
-            if (content._transitionHandler) {
-                content.removeEventListener('transitionend', content._transitionHandler);
-                content._transitionHandler = null;
-            }
-
             const isCollapsed = module.classList.contains('collapsed');
 
             if (isCollapsed) {
-                // Expand
-                content.style.display = 'block';
-
                 // 检查是否是网络模块，如果是则加载数据
                 if (module.querySelector('.network-cards-container') && !networkInfoLoaded) {
                     loadNetworkInfo();
                 }
 
-                // Measure height
-                const height = content.scrollHeight;
-                // Start from 0
-                content.style.maxHeight = '0px';
-                content.style.opacity = '0';
-                // Force reflow
-                content.getBoundingClientRect();
-                // Animate to measured height
-                content.style.maxHeight = height + 'px';
-                content.style.opacity = '1';
-
-                const onEnd = function (e) {
-                    if (e.propertyName === 'max-height') {
-                        // Clear fixed max-height so content can grow/shrink naturally
-                        content.style.maxHeight = '';
-                        content.removeEventListener('transitionend', onEnd);
-                        content._transitionHandler = null;
-                    }
-                };
-                content._transitionHandler = onEnd;
-                content.addEventListener('transitionend', onEnd);
-
                 module.classList.remove('collapsed');
+                animateSectionHeight(content, true);
                 if (module.id === 'cfUsageModule') {
                     updateCountdown(true);
                 }
             } else {
-                // Collapse
-                const height = content.scrollHeight;
-                // Ensure starting height is set
-                content.style.maxHeight = height + 'px';
-                content.style.opacity = '1';
-                // Force reflow
-                content.getBoundingClientRect();
-                // Animate to 0
-                content.style.maxHeight = '0px';
-                content.style.opacity = '0';
-
-                const onEnd = function (e) {
-                    if (e.propertyName === 'max-height') {
-                        // Hide after collapsing to remove from tab order
-                        content.style.display = 'none';
-                        content.removeEventListener('transitionend', onEnd);
-                        content._transitionHandler = null;
-                    }
-                };
-                content._transitionHandler = onEnd;
-                content.addEventListener('transitionend', onEnd);
-
                 module.classList.add('collapsed');
+                animateSectionHeight(content, false);
             }
 
             // 保存模块状态到 localStorage
@@ -10988,74 +10989,29 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
 
         // 网络信息模块的折叠/展开函数
         function toggleNetworkModule(titleEl) {
-            const module = titleEl.closest('.module');
             const content = document.getElementById('network-module-content');
             const icon = titleEl.querySelector('.collapse-icon');
-
-            // If a transition is currently attached, remove it to avoid duplicate handlers
-            if (content._transitionHandler) {
-                content.removeEventListener('transitionend', content._transitionHandler);
-                content._transitionHandler = null;
-            }
 
             const isHidden = content.style.display === 'none' || getComputedStyle(content).display === 'none';
 
             if (isHidden) {
                 // Expand - show latency tests and start testing
-                content.style.display = 'block';
-                content.style.maxHeight = '0px';
-                content.style.opacity = '0';
-
-                requestAnimationFrame(() => {
-                    const height = content.scrollHeight;
-                    content.style.maxHeight = height + 'px';
-                    content.style.opacity = '1';
-                });
+                animateSectionHeight(content, true);
 
                 if (icon) {
                     icon.style.transform = 'rotate(0deg)';
                 }
-
-                const onEnd = function (e) {
-                    if (e.propertyName === 'max-height') {
-                        // Clear fixed max-height so content can grow/shrink naturally
-                        content.style.maxHeight = '';
-                        content.removeEventListener('transitionend', onEnd);
-                        content._transitionHandler = null;
-                    }
-                };
-                content._transitionHandler = onEnd;
-                content.addEventListener('transitionend', onEnd);
 
                 // 生成卡片并开始测试
                 startLatencyTest();
             } else {
                 // Collapse - hide latency tests
                 stopLatencyTest();
-
-                const height = content.scrollHeight;
-                // Ensure starting height is set
-                content.style.maxHeight = height + 'px';
-                content.style.opacity = '1';
-                // Force reflow
-                content.getBoundingClientRect();
-                // Animate to 0
-                content.style.maxHeight = '0px';
-                content.style.opacity = '0';
+                animateSectionHeight(content, false);
 
                 if (icon) {
                     icon.style.transform = 'rotate(90deg)';
                 }
-
-                const onEnd = function (e) {
-                    if (e.propertyName === 'max-height') {
-                        content.style.display = 'none';
-                        content.removeEventListener('transitionend', onEnd);
-                        content._transitionHandler = null;
-                    }
-                };
-                content._transitionHandler = onEnd;
-                content.addEventListener('transitionend', onEnd);
             }
         }
 
@@ -11771,17 +11727,19 @@ vless://7b102311-43fd-4e8f-977e-8090623c101d@edt-pages.github.io:443?security=tl
                     // 需要展开
                     module.classList.remove('collapsed');
                     if (content) {
+                        clearHeightTransition(content);
                         content.style.display = 'block';
-                        content.style.maxHeight = '';
-                        content.style.opacity = '1';
+                        content.style.height = 'auto';
+                        content.style.overflow = 'visible';
                     }
                 } else if (!shouldBeExpanded && !isCurrentlyCollapsed) {
                     // 需要折叠
                     module.classList.add('collapsed');
                     if (content) {
+                        clearHeightTransition(content);
                         content.style.display = 'none';
-                        content.style.maxHeight = '0px';
-                        content.style.opacity = '0';
+                        content.style.height = '0px';
+                        content.style.overflow = 'hidden';
                     }
                 }
             });
